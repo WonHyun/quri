@@ -31,6 +31,10 @@ param mailPassword string = ''
 @description('메일 From 헤더. 비우면 사용자명 기반 기본값 사용.')
 param mailFrom string = ''
 
+@secure()
+@description('Copilot CLI 헤드리스 인증 토큰 (GitHub OAuth gho_ 또는 "Copilot Requests" 권한의 fine-grained PAT). 비우면 문제 생성이 실패합니다.')
+param copilotGithubToken string = ''
+
 var appServicePlanName = '${namePrefix}-plan'
 var webAppName = '${namePrefix}-api'
 var dbServerName = '${namePrefix}-pg-${uniqueString(resourceGroup().id)}'
@@ -58,6 +62,7 @@ resource web 'Microsoft.Web/sites@2023-12-01' = {
     siteConfig: {
       linuxFxVersion: 'NODE|22-lts'
       healthCheckPath: '/api/healthz'
+      appCommandLine: 'bash -c \'chmod +x /home/site/wwwroot/node_modules/@github/copilot-linux-x64/copilot 2>/dev/null; cd /home/site/wwwroot && node dist/main.js\''
       appSettings: [
         {
           name: 'WEBSITE_NODE_DEFAULT_VERSION'
@@ -81,11 +86,31 @@ resource web 'Microsoft.Web/sites@2023-12-01' = {
         }
         {
           name: 'COPILOT_BIN'
-          value: 'copilot'
+          value: '/home/site/wwwroot/node_modules/@github/copilot-linux-x64/copilot'
+        }
+        {
+          name: 'COPILOT_HOME'
+          value: '/home/.copilot'
+        }
+        {
+          name: 'COPILOT_AUTO_UPDATE'
+          value: 'false'
+        }
+        {
+          name: 'COPILOT_GITHUB_TOKEN'
+          value: copilotGithubToken
         }
         {
           name: 'COPILOT_MODEL'
           value: 'auto'
+        }
+        {
+          name: 'ENABLE_ORYX_BUILD'
+          value: 'false'
+        }
+        {
+          name: 'SCM_DO_BUILD_DURING_DEPLOYMENT'
+          value: 'false'
         }
         {
           name: 'MAIL_HOST'

@@ -58,7 +58,8 @@ jobs:
       # vendored as a local file: dependency to pull its runtime dep `zod`,
       # then materialized as a REAL directory inside node_modules. npm installs
       # file: deps as symlinks, which break when the bundle is zipped/extracted
-      # on App Service — a real copy survives deployment intact.
+      # on App Service — a real copy survives deployment intact. The GitHub
+      # Copilot CLI is also bundled here so quiz generation works in production.
       - name: Stage deployment artifact
         run: |
           mkdir -p deploy
@@ -70,6 +71,12 @@ jobs:
           cp -r ../packages/agent/dist vendor/agent/dist
           cp ../packages/agent/package.json vendor/agent/package.json
           npm pkg set dependencies.@quri/agent=file:vendor/agent
+          # Bundle the GitHub Copilot CLI so quiz generation works on App Service
+          # (the container has no `copilot` on PATH). The runner is linux-x64, so
+          # npm installs the matching @github/copilot-linux-x64 platform binary —
+          # the same platform App Service runs on. COPILOT_BIN points at that ELF
+          # binary directly (avoids the .bin symlink, which zip-deploy drops).
+          npm pkg set dependencies.@github/copilot=^1.0.63
           npm install --omit=dev --no-audit --no-fund
           # Replace the npm-created symlink with a real directory so @quri/agent
           # resolves at runtime after the deploy package is zipped/extracted.

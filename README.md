@@ -172,8 +172,17 @@ azd up   # 로그인되어 있다고 가정
 `.github/workflows/azure-deploy.yml`이 `main` 푸시 시 web+api를 빌드해 단일 App Service로 배포합니다.
 필요 시크릿: `AZURE_WEBAPP_PUBLISH_PROFILE`, `AZURE_WEBAPP_NAME`.
 
-> ⚠️ **Copilot 인증 주의**: 문제 생성은 호스트에 `copilot` CLI가 설치·인증되어 있어야 동작합니다.
-> Azure App Service에는 기본 제공되지 않으므로, 운영 환경에서 생성 기능을 쓰려면 CLI 설치 및 GitHub 인증 토큰 주입이 별도로 필요합니다.
+> ✅ **Copilot 인증(운영)**: 배포 파이프라인이 GitHub Copilot CLI(`@github/copilot`의 linux-x64
+> 바이너리)를 배포 번들에 포함하고, App Service 설정 `COPILOT_BIN`이 해당 바이너리를 직접 가리키도록
+> 구성되어 운영 환경에서도 문제 생성이 동작합니다. 헤드리스 인증 토큰은 `COPILOT_GITHUB_TOKEN`으로
+> 주입합니다(GitHub OAuth `gho_` 토큰 또는 "Copilot Requests" 권한의 fine-grained PAT; 클래식 `ghp_`는 미지원).
+>
+> ```bash
+> # 권장: 최소 권한 fine-grained PAT("Copilot Requests") 사용. 임시로 gh OAuth 토큰도 가능.
+> azd env set COPILOT_GITHUB_TOKEN "<gho_ 또는 fine-grained PAT>"
+> ```
+> 토큰은 `infra/main.bicep`이 App Service 환경변수로 주입합니다. zip 배포가 실행권한/심링크를 제거하므로,
+> 시작 명령에서 바이너리에 `chmod +x`를 수행한 뒤 앱을 기동합니다.
 > (이미 DB에 저장된 문제 풀이/조회/채점은 Copilot 없이도 동작합니다.)
 
 ## 동작 원리 — Copilot 연동
