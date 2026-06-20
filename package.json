@@ -1,0 +1,32 @@
+{
+  "name": "quri",
+  "private": true,
+  "version": "0.1.0",
+  "description": "AI 학습 퀴즈 웹앱 — 주제 기반 문제 생성/풀이/해설 (NestJS + React + Copilot)",
+  "workspaces": [
+    "packages/agent",
+    "apps/api",
+    "apps/web"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "npm run build --workspace=packages/agent && npm run build --workspace=apps/web && npm run build --workspace=apps/api",
+    "dev": "concurrently -n api,web -c blue,green \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "npm run start:dev --workspace=apps/api",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "lint": "npm run lint --workspace=apps/api && npm run lint --workspace=apps/web",
+    "test": "npm run test --workspace=packages/agent && npm run test --workspace=apps/api",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "prisma:generate": "npm run prisma:generate --workspace=apps/api",
+    "prisma:migrate": "npm run prisma:migrate --workspace=apps/api"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "concurrently": "^9.1.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.4.11"
+  }
+}

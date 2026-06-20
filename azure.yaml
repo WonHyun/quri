@@ -1,0 +1,10 @@
+# azure.yaml — azd service map (Azure App Service B1 Basic + PostgreSQL Flexible Server)
+# 단일 App Service가 NestJS API + React 정적 번들을 함께 서빙한다.
+name: quri
+metadata:
+  template: quri@0.1.0
+services:
+  api:
+    project: ./apps/api
+    language: ts
+    host: appservice

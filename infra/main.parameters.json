@@ -1,0 +1,21 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "${AZURE_LOCATION}"
+    },
+    "namePrefix": {
+      "value": "${NAME_PREFIX=lipcode}"
+    },
+    "dbAdminUser": {
+      "value": "${DB_ADMIN_USER=lipcode}"
+    },
+    "dbAdminPassword": {
+      "value": "${DB_ADMIN_PASSWORD}"
+    },
+    "jwtSecret": {
+      "value": "${JWT_SECRET}"
+    }
+  }
+}

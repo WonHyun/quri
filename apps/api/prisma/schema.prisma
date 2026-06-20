@@ -1,0 +1,115 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// 인증/사용자 도메인 — 이메일 기반 회원가입/로그인 단위.
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String
+  displayName   String?
+  emailVerified Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  // 이 유저가 소유한 퀴즈(소유권 도메인)
+  ownerships QuizOwnership[]
+  // 이 유저의 풀이 기록(기록/대시보드 도메인)
+  attempts   QuizAttempt[]
+}
+
+/// 이메일 인증 도메인 — 회원가입 전 단계의 보류 중인 가입 요청.
+/// 이메일별로 1건만 유지하며(코드 재요청 시 덮어씀), 검증 성공 시 User 로 승격되고 삭제된다.
+model EmailVerification {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  displayName  String?
+  codeHash     String
+  attempts     Int      @default(0)
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+}
+
+/// 퀴즈 콘텐츠 도메인 — 소유자/유저 정보를 직접 갖지 않는다.
+/// 소유권은 QuizOwnership 으로 분리되어, 향후 한 퀴즈를 여러 유저에게
+/// 공개/공유하는 확장을 가능하게 한다.
+model Quiz {
+  id         String     @id @default(uuid())
+  topic      String
+  difficulty String?
+  createdAt  DateTime   @default(now())
+
+  questions Question[]
+  ownership QuizOwnership?
+  attempts  QuizAttempt[]
+}
+
+model Question {
+  id           String         @id @default(uuid())
+  quiz         Quiz           @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  quizId       String
+  text         String
+  options      Json
+  correctIndex Int
+  explanation  String
+  order        Int
+  answers      AnswerRecord[]
+
+  @@index([quizId])
+}
+
+enum QuizVisibility {
+  PRIVATE
+  PUBLIC
+}
+
+/// 소유권 도메인 — 유저와 퀴즈의 소유 관계 및 가시성을 분리해서 표현한다.
+/// 현재는 퀴즈당 단일 소유자(quizId @unique)이며, visibility 로 향후
+/// 타 유저 노출(PUBLIC)을 제어한다.
+model QuizOwnership {
+  id         String         @id @default(uuid())
+  quiz       Quiz           @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  quizId     String         @unique
+  owner      User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId    String
+  visibility QuizVisibility @default(PRIVATE)
+  createdAt  DateTime       @default(now())
+
+  @@index([ownerId])
+}
+
+/// 기록 도메인 — 유저가 한 퀴즈를 제출(채점)한 1회의 시도. 대시보드 집계 소스.
+model QuizAttempt {
+  id        String         @id @default(uuid())
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  quiz      Quiz           @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  quizId    String
+  score     Int
+  total     Int
+  createdAt DateTime       @default(now())
+  answers   AnswerRecord[]
+
+  @@index([userId])
+  @@index([quizId])
+}
+
+/// 시도 내 개별 문항 응답 기록.
+model AnswerRecord {
+  id            String      @id @default(uuid())
+  attempt       QuizAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  attemptId     String
+  question      Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId    String
+  selectedIndex Int
+  isCorrect     Boolean
+
+  @@index([attemptId])
+  @@index([questionId])
+}
