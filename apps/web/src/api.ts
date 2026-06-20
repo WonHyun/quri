@@ -3,6 +3,7 @@ import type {
   AuthUser,
   DashboardStats,
   Difficulty,
+  ExamPreset,
   Quiz,
   QuizSummary,
   SubmitResult,
@@ -124,6 +125,8 @@ export async function createQuiz(input: {
   count: number;
   choiceCount: number;
   difficulty: Difficulty;
+  presetSlug?: string;
+  subject?: string;
 }): Promise<Quiz> {
   const res = await fetch("/api/quizzes", {
     method: "POST",
@@ -131,6 +134,11 @@ export async function createQuiz(input: {
     body: JSON.stringify(input),
   });
   return handle<Quiz>(res);
+}
+
+/** 시험 프리셋 카탈로그 (인증 불필요, 정적 데이터). */
+export async function listPresets(): Promise<ExamPreset[]> {
+  return handle<ExamPreset[]>(await fetch("/api/presets"));
 }
 
 export async function listQuizzes(): Promise<QuizSummary[]> {

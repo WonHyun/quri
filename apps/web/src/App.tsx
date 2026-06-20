@@ -3,6 +3,7 @@ import {
   createQuiz,
   getDashboard,
   getQuiz,
+  listPresets,
   listQuizzes,
   submitQuiz,
   UnauthorizedError,
@@ -10,6 +11,7 @@ import {
 import type {
   DashboardStats,
   Difficulty,
+  ExamPreset,
   Quiz,
   QuizSummary,
   SubmitResult,
@@ -35,6 +37,10 @@ export default function App() {
   const [count, setCount] = useState(5);
   const [choiceCount, setChoiceCount] = useState(4);
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
+
+  const [presets, setPresets] = useState<ExamPreset[]>([]);
+  const [presetSlug, setPresetSlug] = useState<string | null>(null);
+  const [subject, setSubject] = useState<string | null>(null);
 
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [answers, setAnswers] = useState<Record<string, number>>({});
@@ -71,8 +77,42 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  useEffect(() => {
+    listPresets()
+      .then(setPresets)
+      .catch(() => {
+        /* 프리셋은 보조 기능 — 실패해도 자유주제 흐름은 동작 */
+      });
+  }, []);
+
+  const activePreset = presets.find((p) => p.slug === presetSlug) ?? null;
+
+  /** 프리셋 선택/해제 — 선택 시 주제칸을 기본값으로 채운다. */
+  function selectPreset(slug: string) {
+    if (presetSlug === slug) {
+      setPresetSlug(null);
+      setSubject(null);
+      return;
+    }
+    const p = presets.find((x) => x.slug === slug);
+    setPresetSlug(slug);
+    setSubject(null);
+    if (p) setTopic(p.defaultTopic);
+  }
+
+  /** 자유주제를 직접 수정하면 프리셋 선택을 해제한다. */
+  function editTopic(v: string) {
+    setTopic(v);
+    if (presetSlug) {
+      setPresetSlug(null);
+      setSubject(null);
+    }
+  }
+
   function randomizeTopic() {
     const t = RANDOM_TOPICS[Math.floor(Math.random() * RANDOM_TOPICS.length)];
+    setPresetSlug(null);
+    setSubject(null);
     setTopic(t);
   }
 
@@ -89,6 +129,8 @@ export default function App() {
         count,
         choiceCount,
         difficulty,
+        presetSlug: presetSlug ?? undefined,
+        subject: subject ?? undefined,
       });
       setQuiz(q);
       setAnswers({});
@@ -229,13 +271,14 @@ export default function App() {
             <span className="btn-i">✨</span> AI 학습 퀴즈
           </span>
           <h1>
-            궁금한 모든 주제를,
+            자격증 시험,
             <br />
             <span className="grad">퀴즈로 정복</span>하세요
           </h1>
           <p>
-            주제만 입력하면 Quri가 4지선다 문제를 만들고, 풀이·채점·해설까지
-            한 번에. 만든 퀴즈는 내 계정에 저장돼 언제든 다시 도전할 수 있어요.
+            SQLD·정보처리기사·정보보안기사·한국사 등 시험을 고르면 Quri가 출제
+            경향에 맞춘 4지선다 문제를 만들고, 풀이·채점·해설까지 한 번에.
+            원하는 주제를 직접 입력할 수도 있어요.
           </p>
         </div>
       )}
@@ -258,13 +301,19 @@ export default function App() {
           {view === "home" && (
             <HomeView
               topic={topic}
-              setTopic={setTopic}
+              setTopic={editTopic}
               count={count}
               setCount={setCount}
               choiceCount={choiceCount}
               setChoiceCount={setChoiceCount}
               difficulty={difficulty}
               setDifficulty={setDifficulty}
+              presets={presets}
+              presetSlug={presetSlug}
+              onSelectPreset={selectPreset}
+              subjects={activePreset?.subjects ?? []}
+              subject={subject}
+              setSubject={setSubject}
               onRandom={randomizeTopic}
               onGenerate={handleGenerate}
               disabled={loading}

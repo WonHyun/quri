@@ -42,6 +42,15 @@ export interface SubmitResult {
 
 export type Difficulty = "easy" | "medium" | "hard";
 
+export interface ExamPreset {
+  slug: string;
+  name: string;
+  category: string;
+  blurb: string;
+  defaultTopic: string;
+  subjects: string[];
+}
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -68,10 +77,18 @@ export interface TopicStat {
   accuracy: number;
 }
 
+export interface PresetStat {
+  presetSlug: string;
+  name: string;
+  attempts: number;
+  accuracy: number;
+}
+
 export interface DashboardStats {
   ownedQuizzes: number;
   totalAttempts: number;
   averageAccuracy: number;
   recentAttempts: AttemptSummary[];
   byTopic: TopicStat[];
+  byPreset: PresetStat[];
 }

@@ -60,6 +60,30 @@ export function DashboardView(props: {
         </ul>
       )}
 
+      <h3 className="dash-h">시험별 정답률</h3>
+      {stats.byPreset.length === 0 ? (
+        <p className="muted">
+          아직 시험 프리셋으로 푼 기록이 없어요. 홈에서 자격증 시험을 골라
+          도전해 보세요.
+        </p>
+      ) : (
+        <ul className="topic-stats">
+          {stats.byPreset.map((p) => (
+            <li key={p.presetSlug}>
+              <div className="topic-stat-head">
+                <span>{p.name}</span>
+                <span className="muted">
+                  {p.accuracy}% · {p.attempts}회
+                </span>
+              </div>
+              <div className="progress-bar">
+                <span style={{ width: `${p.accuracy}%` }} />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
       <h3 className="dash-h">주제별 정답률</h3>
       {stats.byTopic.length === 0 ? (
         <p className="muted">집계할 데이터가 없어요.</p>

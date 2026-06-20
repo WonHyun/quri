@@ -90,12 +90,25 @@ npm run dev
 
 | 메서드 | 경로                      | 설명                                                            |
 | ------ | ------------------------- | --------------------------------------------------------------- |
-| POST   | `/api/quizzes`            | `{ topic, count?, difficulty? }` → 문제 생성·저장 + 소유권 부여 |
+| POST   | `/api/quizzes`            | `{ topic, count?, difficulty?, choiceCount?, presetSlug?, subject? }` → 문제 생성·저장 + 소유권 부여 |
 | GET    | `/api/quizzes`            | 내가 소유한 퀴즈 목록                                           |
 | GET    | `/api/quizzes/:id`        | 단일 퀴즈 (소유자/공개일 때만, 정답 숨김)                       |
 | POST   | `/api/quizzes/:id/submit` | `{ answers: [...] }` → 채점 + 유저 단위 시도 기록               |
 | GET    | `/api/me/attempts`        | 내 풀이 시도 목록                                               |
 | GET    | `/api/dashboard/stats`    | 개인 대시보드 집계(만든 퀴즈·총 시도·평균 정답률·주제별 정답률) |
+| GET    | `/api/presets`            | 시험 프리셋 카탈로그(인증 불필요, 정적 데이터)                  |
+
+### 시험 프리셋 (자격증 대비)
+
+자유 주제 입력은 그대로 유지하면서, **시험별 프리셋**을 보조 옵션으로 제공합니다.
+SQLD·정보처리기사·정보보안기사·한국사능력검정시험·ADsP·리눅스마스터 2급 등을 고르면,
+해당 시험의 출제 경향을 담은 지침(`promptHints`)이 Copilot 프롬프트에 주입되어 출제 품질을 높입니다.
+
+- 카탈로그 단일 출처: `packages/agent/src/presets.ts` (zod 검증). API/웹이 공유합니다.
+- 요청 시 `presetSlug`(+선택 `subject`)를 보내면 해당 지침/과목 범위가 반영되고,
+  저장·표시용 `topic`은 시험명에서 파생됩니다. 프리셋 미사용 시 기존 자유 주제 흐름과 동일하게 동작합니다.
+- 출력 JSON 스키마(문항/선지/정답/해설)는 불변이라 채점·저장 로직에 영향이 없습니다.
+- 프리셋 추가는 카탈로그 데이터에 항목만 더하면 됩니다.
 
 ## 도메인 구조 (멀티유저)
 
@@ -127,6 +140,14 @@ azd up   # 로그인되어 있다고 가정
 
 > `azd` 환경 변수로 `DB_ADMIN_PASSWORD`와 `JWT_SECRET`(강력한 무작위 값)을 설정해야 합니다.
 > 예: `azd env set JWT_SECRET "$(openssl rand -base64 48)"`
+>
+> 회원가입 인증 메일을 운영에서 쓰려면 SMTP 변수도 설정하세요(미설정 시 코드는 서버 로그로만 출력):
+> ```bash
+> azd env set MAIL_USERNAME "your-account@gmail.com"
+> azd env set MAIL_PASSWORD "<gmail-app-password>"   # 앱 비밀번호
+> azd env set MAIL_FROM "Quri <your-account@gmail.com>"
+> ```
+> 이 값들은 `infra/main.bicep`이 App Service 애플리케이션 설정(환경변수)으로 주입합니다. `.env` 파일은 클라우드에 올리지 않습니다.
 
 `.github/workflows/azure-deploy.yml`이 `main` 푸시 시 web+api를 빌드해 단일 App Service로 배포합니다.
 필요 시크릿: `AZURE_WEBAPP_PUBLISH_PROFILE`, `AZURE_WEBAPP_NAME`.

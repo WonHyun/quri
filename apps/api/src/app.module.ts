@@ -12,6 +12,7 @@ import { OwnershipModule } from "./ownership/ownership.module";
 import { AttemptsModule } from "./attempts/attempts.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { QuizModule } from "./quiz/quiz.module";
+import { PresetsModule } from "./presets/presets.module";
 import { HealthController } from "./health/health.controller";
 
 @Module({
@@ -36,6 +37,7 @@ import { HealthController } from "./health/health.controller";
     AttemptsModule,
     DashboardModule,
     QuizModule,
+    PresetsModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

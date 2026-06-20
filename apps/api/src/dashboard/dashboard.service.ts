@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { findPreset } from "@quri/agent";
 import { PrismaService } from "../prisma/prisma.service";
 
 /**
@@ -46,10 +47,13 @@ export class DashboardService {
     const quizzes = quizIds.length
       ? await this.prisma.quiz.findMany({
           where: { id: { in: quizIds } },
-          select: { id: true, topic: true },
+          select: { id: true, topic: true, presetSlug: true },
         })
       : [];
     const topicById = new Map(quizzes.map((q) => [q.id, q.topic]));
+    const presetSlugById = new Map(
+      quizzes.map((q) => [q.id, q.presetSlug]),
+    );
 
     const topicAgg = new Map<
       string,
@@ -71,6 +75,31 @@ export class DashboardService {
       }))
       .sort((a, b) => b.attempts - a.attempts);
 
+    // 시험(프리셋) 단위 정답률 — presetSlug 가 있는 퀴즈만 시험명으로 합산한다.
+    const presetAgg = new Map<
+      string,
+      { name: string; score: number; total: number; attempts: number }
+    >();
+    for (const r of byQuizRaw) {
+      const slug = presetSlugById.get(r.quizId);
+      if (!slug) continue;
+      const name = findPreset(slug)?.name ?? slug;
+      const acc =
+        presetAgg.get(slug) ?? { name, score: 0, total: 0, attempts: 0 };
+      acc.score += r._sum.score ?? 0;
+      acc.total += r._sum.total ?? 0;
+      acc.attempts += r._count._all;
+      presetAgg.set(slug, acc);
+    }
+    const byPreset = [...presetAgg.entries()]
+      .map(([slug, a]) => ({
+        presetSlug: slug,
+        name: a.name,
+        attempts: a.attempts,
+        accuracy: a.total > 0 ? Math.round((a.score / a.total) * 100) : 0,
+      }))
+      .sort((a, b) => b.attempts - a.attempts);
+
     return {
       ownedQuizzes,
       totalAttempts,
@@ -84,6 +113,7 @@ export class DashboardService {
         createdAt: a.createdAt,
       })),
       byTopic,
+      byPreset,
     };
   }
 }

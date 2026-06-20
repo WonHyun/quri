@@ -43,6 +43,8 @@ model Quiz {
   id         String     @id @default(uuid())
   topic      String
   difficulty String?
+  presetSlug String?
+  subject    String?
   createdAt  DateTime   @default(now())
 
   questions Question[]

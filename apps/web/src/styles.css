@@ -450,6 +450,50 @@ select:focus {
 :root[data-theme="dark"] .segmented button[aria-pressed="true"] {
   background: var(--surface-3);
 }
+.segmented.wrap {
+  display: flex;
+  flex-wrap: wrap;
+}
+.segmented.wrap button {
+  flex: 0 0 auto;
+}
+
+/* exam preset picker */
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px;
+}
+.preset-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  text-align: left;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+.preset-chip:hover {
+  border-color: var(--accent, #6366f1);
+}
+.preset-chip.is-active {
+  border-color: var(--accent, #6366f1);
+  box-shadow: var(--shadow-sm);
+  background: var(--surface);
+}
+.preset-name {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--text);
+}
+.preset-cat {
+  font-size: 0.74rem;
+  color: var(--text-soft);
+}
 
 /* stepper */
 .stepper {

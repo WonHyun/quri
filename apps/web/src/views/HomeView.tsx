@@ -1,5 +1,5 @@
 import { DIFFICULTY_LABELS } from "../constants";
-import type { Difficulty } from "../types";
+import type { Difficulty, ExamPreset } from "../types";
 
 export function HomeView(props: {
   topic: string;
@@ -10,6 +10,12 @@ export function HomeView(props: {
   setChoiceCount: (v: number) => void;
   difficulty: Difficulty;
   setDifficulty: (v: Difficulty) => void;
+  presets: ExamPreset[];
+  presetSlug: string | null;
+  onSelectPreset: (slug: string) => void;
+  subjects: string[];
+  subject: string | null;
+  setSubject: (v: string | null) => void;
   onRandom: () => void;
   onGenerate: () => void;
   disabled: boolean;
@@ -21,10 +27,60 @@ export function HomeView(props: {
   return (
     <section className="card fade-in">
       <h2>새 퀴즈 만들기</h2>
-      <p className="card-sub">주제를 정하고 난이도와 문항 수, 선지 수를 골라보세요.</p>
+      <p className="card-sub">
+        시험을 고르면 출제 경향에 맞춰 출제돼요. 직접 주제를 입력해도 됩니다.
+      </p>
+
+      {props.presets.length > 0 && (
+        <div className="field">
+          <span className="label">자격증 시험</span>
+          <div className="preset-grid" role="group" aria-label="자격증 시험 프리셋">
+            {props.presets.map((p) => (
+              <button
+                key={p.slug}
+                type="button"
+                className={`preset-chip${
+                  props.presetSlug === p.slug ? " is-active" : ""
+                }`}
+                aria-pressed={props.presetSlug === p.slug}
+                onClick={() => props.onSelectPreset(p.slug)}
+                title={p.blurb}
+              >
+                <span className="preset-name">{p.name}</span>
+                <span className="preset-cat">{p.category}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {props.presetSlug && props.subjects.length > 0 && (
+        <div className="field">
+          <span className="label">과목 (선택)</span>
+          <div className="segmented wrap" role="group" aria-label="과목">
+            <button
+              type="button"
+              aria-pressed={props.subject === null}
+              onClick={() => props.setSubject(null)}
+            >
+              전체
+            </button>
+            {props.subjects.map((s) => (
+              <button
+                key={s}
+                type="button"
+                aria-pressed={props.subject === s}
+                onClick={() => props.setSubject(s)}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <label className="field">
-        <span className="label">주제</span>
+        <span className="label">주제 (직접 입력)</span>
         <div className="topic-row">
           <input
             type="text"

@@ -25,6 +25,10 @@ export interface GenerateQuizParams {
   choiceCount?: number;
   /** 난이도 힌트 (선택) */
   difficulty?: Difficulty;
+  /** 시험 프리셋에서 주입되는 출제 특화 지시 (선택) */
+  presetHints?: string[];
+  /** 출제 범위를 좁히는 과목/영역 (선택) */
+  subject?: string;
 }
 
 export class CopilotError extends Error {}
@@ -129,13 +133,24 @@ export class CopilotAgent {
 }
 
 function buildPrompt(params: GenerateQuizParams): string {
-  const { topic, count, difficulty } = params;
+  const { topic, count, difficulty, subject, presetHints } = params;
   const choiceCount = clampChoiceCount(params.choiceCount);
   const maxIndex = choiceCount - 1;
   const diff = difficulty ? `난이도는 "${difficulty}" 수준으로 맞춰라.` : "";
   const optionSchema = Array(choiceCount).fill("string").join(",");
+
+  const scope = subject
+    ? `출제 범위는 "${subject}" 영역에 집중하라.`
+    : "";
+  const examBlock =
+    presetHints && presetHints.length > 0
+      ? ["시험 특화 지침:", ...presetHints.map((h) => `- ${h}`)].join("\n")
+      : "";
+
   return [
     `너는 학습용 퀴즈 출제자다. 주제 "${topic}"에 대한 한국어 객관식 ${choiceCount}지선다 문제를 정확히 ${count}개 만들어라.`,
+    examBlock,
+    scope,
     diff,
     "규칙:",
     `- 각 문제는 보기(options) ${choiceCount}개를 가지며, 정답은 정확히 하나다.`,

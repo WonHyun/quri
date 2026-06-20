@@ -4,12 +4,27 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
-import { CopilotError } from "@quri/agent";
+import { CopilotError, ExamPreset, findPreset } from "@quri/agent";
 import { PrismaService } from "../prisma/prisma.service";
 import { AgentService } from "../agent/agent.service";
 import { CreateQuizDto } from "./dto/create-quiz.dto";
 
 const DEFAULT_QUESTION_COUNT = 5;
+
+/**
+ * 저장·표시용 topic 을 결정한다.
+ * 프리셋이 있으면 시험명(+과목)으로 파생하고, 없으면 사용자가 입력한 자유주제를 쓴다.
+ */
+function deriveTopic(
+  dto: CreateQuizDto,
+  preset: ExamPreset | undefined,
+  subject: string | undefined,
+): string {
+  if (preset) {
+    return subject ? `${preset.name} · ${subject}` : preset.name;
+  }
+  return dto.topic;
+}
 
 /** 정답을 숨긴 문제 형태 (풀이용) */
 function toPublicQuestion(q: {
@@ -68,13 +83,23 @@ export class QuizService {
   async generateAndCreate(dto: CreateQuizDto) {
     const count = dto.count ?? DEFAULT_QUESTION_COUNT;
 
+    // 프리셋이 지정되면 출제 지침/과목을 주입하고, 표시용 topic 을 파생한다.
+    const preset = dto.presetSlug ? findPreset(dto.presetSlug) : undefined;
+    const subject =
+      dto.subject && preset?.subjects.includes(dto.subject)
+        ? dto.subject
+        : undefined;
+    const topic = deriveTopic(dto, preset, subject);
+
     let generated;
     try {
       generated = await this.agent.generateQuiz({
-        topic: dto.topic,
+        topic,
         count,
         choiceCount: dto.choiceCount,
         difficulty: dto.difficulty,
+        presetHints: preset?.promptHints,
+        subject,
       });
     } catch (e) {
       if (e instanceof CopilotError) {
@@ -85,8 +110,10 @@ export class QuizService {
 
     return this.prisma.quiz.create({
       data: {
-        topic: dto.topic,
+        topic,
         difficulty: dto.difficulty ?? null,
+        presetSlug: preset?.slug ?? null,
+        subject: subject ?? null,
         questions: {
           create: generated.map((q, i) => ({
             text: q.question,
