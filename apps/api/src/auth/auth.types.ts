@@ -2,10 +2,12 @@
 export interface JwtPayload {
   sub: string;
   email: string;
+  isGuest?: boolean;
 }
 
 /** 가드 통과 후 요청에 주입되는 인증 사용자. */
 export interface AuthUser {
   id: string;
   email: string;
+  isGuest: boolean;
 }

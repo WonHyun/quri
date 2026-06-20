@@ -8,6 +8,7 @@ import {
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcryptjs";
+import { randomUUID } from "crypto";
 import { UsersService } from "../users/users.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { MailService } from "../mail/mail.service";
@@ -16,6 +17,8 @@ import { JwtPayload } from "./auth.types";
 const SALT_ROUNDS = 10;
 const CODE_TTL_MS = 10 * 60 * 1000; // 10분
 const MAX_VERIFY_ATTEMPTS = 5;
+// 비활성 게스트 계정 보관 기간 — 이 기간이 지나면 데이터와 함께 정리한다.
+const GUEST_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7일
 
 /** 인증 도메인 — 이메일 인증 기반 회원가입/로그인과 JWT 발급을 담당한다. */
 @Injectable()
@@ -126,7 +129,7 @@ export class AuthService {
       where: { email: normalizedEmail },
     });
 
-    return this.issue(user.id, user.email, user.displayName);
+    return this.issue(user.id, user.email, user.displayName, user.isGuest);
   }
 
   /** 보류 중인 가입 요청에 대해 새 인증 코드를 재발송한다. */
@@ -161,7 +164,25 @@ export class AuthService {
     if (!ok) {
       throw new UnauthorizedException("이메일 또는 비밀번호가 올바르지 않습니다.");
     }
-    return this.issue(user.id, user.email, user.displayName);
+    return this.issue(user.id, user.email, user.displayName, user.isGuest);
+  }
+
+  /**
+   * 게스트 로그인 — 이메일 인증 없이 임시 계정을 생성하고 JWT 를 발급한다.
+   * 게스트도 정식 User 레코드를 가지므로 퀴즈 생성/풀이/대시보드를 그대로 사용할 수 있다.
+   * 누적을 막기 위해 일정 기간이 지난 게스트 계정은 주기적으로 정리된다.
+   */
+  async createGuest() {
+    const email = `guest_${randomUUID()}@guest.quri.local`;
+    const passwordHash = await bcrypt.hash(randomUUID(), SALT_ROUNDS);
+    const user = await this.users.create({
+      email,
+      passwordHash,
+      displayName: "게스트",
+      emailVerified: false,
+      isGuest: true,
+    });
+    return this.issue(user.id, user.email, user.displayName, true);
   }
 
   async me(userId: string) {
@@ -173,6 +194,7 @@ export class AuthService {
       id: user.id,
       email: user.email,
       displayName: user.displayName,
+      isGuest: user.isGuest,
       createdAt: user.createdAt,
     };
   }
@@ -192,9 +214,44 @@ export class AuthService {
     }
   }
 
-  private async issue(id: string, email: string, displayName: string | null) {
-    const payload: JwtPayload = { sub: id, email };
+  /**
+   * 오래된 게스트 계정과 그 데이터(소유 퀴즈·풀이 기록)를 주기적으로 정리한다(매일 자정).
+   * 게스트는 가입 절차 없이 누구나 만들 수 있어 누적되므로, 보관 기간이 지난 계정은
+   * 소유 퀴즈를 먼저 삭제(연쇄로 문항/기록 제거)한 뒤 계정을 제거한다.
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async purgeStaleGuests(): Promise<void> {
+    const cutoff = new Date(Date.now() - GUEST_TTL_MS);
+    const stale = await this.prisma.user.findMany({
+      where: { isGuest: true, createdAt: { lt: cutoff } },
+      select: { id: true },
+    });
+    if (stale.length === 0) return;
+
+    const guestIds = stale.map((u) => u.id);
+    const owned = await this.prisma.quizOwnership.findMany({
+      where: { ownerId: { in: guestIds } },
+      select: { quizId: true },
+    });
+    const quizIds = owned.map((o) => o.quizId);
+
+    await this.prisma.$transaction([
+      this.prisma.quiz.deleteMany({ where: { id: { in: quizIds } } }),
+      this.prisma.user.deleteMany({ where: { id: { in: guestIds } } }),
+    ]);
+    this.logger.log(
+      `오래된 게스트 계정 ${guestIds.length}건(퀴즈 ${quizIds.length}건) 정리 완료.`,
+    );
+  }
+
+  private async issue(
+    id: string,
+    email: string,
+    displayName: string | null,
+    isGuest: boolean,
+  ) {
+    const payload: JwtPayload = { sub: id, email, isGuest };
     const token = await this.jwt.signAsync(payload);
-    return { token, user: { id, email, displayName } };
+    return { token, user: { id, email, displayName, isGuest } };
   }
 }

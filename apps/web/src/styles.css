@@ -1001,6 +1001,48 @@ label.option:hover {
 .banner .banner-close:hover {
   opacity: 1;
 }
+.banner.guest-banner {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  color: var(--text-soft);
+}
+.banner .banner-cta {
+  margin-left: auto;
+  flex: none;
+  background: var(--primary);
+  color: var(--primary-ink);
+  border: none;
+  border-radius: var(--r-pill);
+  padding: 6px 14px;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.banner .banner-cta:hover {
+  filter: brightness(1.05);
+}
+.auth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  margin: 18px 0 4px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.auth-guest {
+  width: 100%;
+  justify-content: center;
+}
 .spinner {
   width: 16px;
   height: 16px;

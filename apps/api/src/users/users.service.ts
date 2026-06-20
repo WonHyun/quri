@@ -19,6 +19,7 @@ export class UsersService {
     passwordHash: string;
     displayName?: string;
     emailVerified?: boolean;
+    isGuest?: boolean;
   }) {
     return this.prisma.user.create({ data });
   }

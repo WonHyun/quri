@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  guestLogin as apiGuestLogin,
   login as apiLogin,
   resendCode as apiResendCode,
   signup as apiSignup,
@@ -87,6 +88,19 @@ export function AuthView(props: {
     try {
       await apiResendCode({ email: email.trim() });
       setInfo("인증 코드를 다시 보냈어요.");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function startGuest() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await apiGuestLogin();
+      props.onAuthed(res.token, res.user);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -217,6 +231,18 @@ export function AuthView(props: {
             <span className="btn-i">{mode === "login" ? "🔑" : "✨"}</span>{" "}
             {mode === "login" ? "로그인" : "인증 코드 받기"}
           </button>
+
+          <div className="auth-divider">
+            <span>또는</span>
+          </div>
+
+          <button className="ghost auth-guest" onClick={startGuest} disabled={loading}>
+            <span className="btn-i">👋</span> 게스트로 둘러보기
+          </button>
+          <p className="card-sub" style={{ marginTop: 8, textAlign: "center" }}>
+            가입 없이 바로 체험할 수 있어요. 기록은 임시 저장되며, 나중에
+            회원가입하면 계정으로 이어갈 수 있어요.
+          </p>
 
           <p className="card-sub" style={{ marginTop: 16, textAlign: "center" }}>
             {mode === "login" ? "계정이 없으신가요? " : "이미 계정이 있으신가요? "}

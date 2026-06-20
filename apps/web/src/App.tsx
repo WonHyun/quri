@@ -266,7 +266,7 @@ export default function App() {
             <span className="btn-i">📊</span> 대시보드
           </button>
           <span className="user-chip" title={user.email}>
-            {user.displayName || user.email}
+            {user.isGuest ? "게스트" : user.displayName || user.email}
           </span>
           <button
             className="icon-btn"
@@ -302,6 +302,22 @@ export default function App() {
 
       <div className="layout">
         <main className="main">
+          {user.isGuest && (
+            <div className="banner guest-banner" role="status">
+              <span>👋</span>
+              <span>
+                게스트 모드예요. 만든 퀴즈와 기록은 임시로 보관되며 일정 기간 뒤
+                삭제될 수 있어요. 계정을 만들면 안전하게 이어갈 수 있어요.
+              </span>
+              <button
+                className="banner-cta"
+                onClick={logout}
+                type="button"
+              >
+                회원가입
+              </button>
+            </div>
+          )}
           {error && (
             <div className="banner error" role="alert">
               <span>⚠️</span>

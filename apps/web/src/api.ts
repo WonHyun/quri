@@ -113,6 +113,12 @@ export async function login(input: {
   return handle<AuthResponse>(res);
 }
 
+/** 게스트 로그인 — 가입 없이 임시 계정으로 바로 시작한다. */
+export async function guestLogin(): Promise<AuthResponse> {
+  const res = await fetch("/api/auth/guest", { method: "POST" });
+  return handle<AuthResponse>(res);
+}
+
 export async function me(): Promise<AuthUser> {
   return handle<AuthUser>(
     await fetch("/api/auth/me", { headers: authHeaders() }),

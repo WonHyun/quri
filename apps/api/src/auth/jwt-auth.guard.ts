@@ -22,7 +22,11 @@ export class JwtAuthGuard implements CanActivate {
     const token = header.slice("Bearer ".length).trim();
     try {
       const payload = await this.jwt.verifyAsync<JwtPayload>(token);
-      const user: AuthUser = { id: payload.sub, email: payload.email };
+      const user: AuthUser = {
+        id: payload.sub,
+        email: payload.email,
+        isGuest: payload.isGuest ?? false,
+      };
       (req as Request & { user: AuthUser }).user = user;
       return true;
     } catch {

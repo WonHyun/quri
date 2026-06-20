@@ -43,6 +43,13 @@ export class AuthController {
     return this.auth.login(dto.email, dto.password);
   }
 
+  /** 게스트 로그인: 가입 없이 임시 계정으로 바로 시작 */
+  @Throttle(AUTH_THROTTLE)
+  @Post("guest")
+  guest() {
+    return this.auth.createGuest();
+  }
+
   @UseGuards(JwtAuthGuard)
   @Get("me")
   me(@CurrentUser() user: AuthUser) {

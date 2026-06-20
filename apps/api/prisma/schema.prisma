@@ -15,6 +15,7 @@ model User {
   passwordHash  String
   displayName   String?
   emailVerified Boolean  @default(false)
+  isGuest       Boolean  @default(false)
   createdAt     DateTime @default(now())
 
   // 이 유저가 소유한 퀴즈(소유권 도메인)
