@@ -15,6 +15,22 @@ param dbAdminPassword string
 @description('JWT 서명 시크릿 (강력한 무작위 값 권장)')
 param jwtSecret string
 
+@description('SMTP 호스트 (회원가입 인증 메일)')
+param mailHost string = 'smtp.gmail.com'
+
+@description('SMTP 포트')
+param mailPort string = '587'
+
+@description('SMTP 사용자명 (보내는 계정). 비우면 메일 발송을 건너뛰고 코드는 로그로만 출력됩니다.')
+param mailUsername string = ''
+
+@secure()
+@description('SMTP 비밀번호 (Gmail 은 앱 비밀번호). 비우면 메일 발송을 건너뜁니다.')
+param mailPassword string = ''
+
+@description('메일 From 헤더. 비우면 사용자명 기반 기본값 사용.')
+param mailFrom string = ''
+
 var appServicePlanName = '${namePrefix}-plan'
 var webAppName = '${namePrefix}-api'
 var dbServerName = '${namePrefix}-pg-${uniqueString(resourceGroup().id)}'
@@ -70,6 +86,26 @@ resource web 'Microsoft.Web/sites@2023-12-01' = {
         {
           name: 'COPILOT_MODEL'
           value: 'auto'
+        }
+        {
+          name: 'MAIL_HOST'
+          value: mailHost
+        }
+        {
+          name: 'MAIL_PORT'
+          value: mailPort
+        }
+        {
+          name: 'MAIL_USERNAME'
+          value: mailUsername
+        }
+        {
+          name: 'MAIL_PASSWORD'
+          value: mailPassword
+        }
+        {
+          name: 'MAIL_FROM'
+          value: mailFrom
         }
       ]
     }

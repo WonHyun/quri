@@ -16,6 +16,21 @@
     },
     "jwtSecret": {
       "value": "${JWT_SECRET}"
+    },
+    "mailHost": {
+      "value": "${MAIL_HOST=smtp.gmail.com}"
+    },
+    "mailPort": {
+      "value": "${MAIL_PORT=587}"
+    },
+    "mailUsername": {
+      "value": "${MAIL_USERNAME=}"
+    },
+    "mailPassword": {
+      "value": "${MAIL_PASSWORD=}"
+    },
+    "mailFrom": {
+      "value": "${MAIL_FROM=}"
     }
   }
 }
