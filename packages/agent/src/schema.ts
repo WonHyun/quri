@@ -34,3 +34,8 @@ export type GeneratedQuiz = z.infer<typeof GeneratedQuizSchema>;
 /** 지원하는 난이도 값 (단일 출처) */
 export const DIFFICULTIES = ["easy", "medium", "hard"] as const;
 export type Difficulty = (typeof DIFFICULTIES)[number];
+
+/** 한 퀴즈의 문항 수 범위 (단일 출처) */
+export const MIN_QUESTION_COUNT = 1;
+export const MAX_QUESTION_COUNT = 100;
+export const DEFAULT_QUESTION_COUNT = 5;

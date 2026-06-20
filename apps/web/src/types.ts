@@ -42,6 +42,18 @@ export interface SubmitResult {
 
 export type Difficulty = "easy" | "medium" | "hard";
 
+export type QuizJobStatus = "pending" | "running" | "ready" | "failed";
+
+export interface QuizJob {
+  id: string;
+  topic: string;
+  count: number;
+  status: QuizJobStatus;
+  quizId: string | null;
+  error: string | null;
+  createdAt: string;
+}
+
 export interface ExamPreset {
   slug: string;
   name: string;
@@ -49,6 +61,9 @@ export interface ExamPreset {
   blurb: string;
   defaultTopic: string;
   subjects: string[];
+  defaultCount: number;
+  defaultChoiceCount: number;
+  defaultDifficulty: Difficulty;
 }
 
 export interface AuthUser {

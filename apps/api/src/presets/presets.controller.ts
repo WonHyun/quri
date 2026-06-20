@@ -18,6 +18,9 @@ export class PresetsController {
       blurb: p.blurb,
       defaultTopic: p.defaultTopic,
       subjects: p.subjects,
+      defaultCount: p.defaultCount,
+      defaultChoiceCount: p.defaultChoiceCount,
+      defaultDifficulty: p.defaultDifficulty,
     }));
   }
 }

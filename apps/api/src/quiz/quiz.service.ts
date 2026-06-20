@@ -4,12 +4,10 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
-import { CopilotError, ExamPreset, findPreset } from "@quri/agent";
+import { CopilotError, DEFAULT_QUESTION_COUNT, ExamPreset, findPreset } from "@quri/agent";
 import { PrismaService } from "../prisma/prisma.service";
 import { AgentService } from "../agent/agent.service";
 import { CreateQuizDto } from "./dto/create-quiz.dto";
-
-const DEFAULT_QUESTION_COUNT = 5;
 
 /**
  * 저장·표시용 topic 을 결정한다.
@@ -131,6 +129,22 @@ export class QuizService {
   /** 단일 퀴즈 (정답 숨김, 풀이용) */
   async findPublic(id: string) {
     return toPublicQuiz(await this.getQuizWithQuestions(id));
+  }
+
+  /**
+   * 생성 전, 저장될 표시용 topic 과 문항 수를 미리 계산한다.
+   * 비동기 작업(job) 라벨링에 사용된다.
+   */
+  resolvePreview(dto: CreateQuizDto): { topic: string; count: number } {
+    const preset = dto.presetSlug ? findPreset(dto.presetSlug) : undefined;
+    const subject =
+      dto.subject && preset?.subjects.includes(dto.subject)
+        ? dto.subject
+        : undefined;
+    return {
+      topic: deriveTopic(dto, preset, subject),
+      count: dto.count ?? DEFAULT_QUESTION_COUNT,
+    };
   }
 
   /** 퀴즈 엔티티를 정답 숨긴 공개 형태로 변환한다. */

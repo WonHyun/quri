@@ -1,4 +1,8 @@
-import { DIFFICULTY_LABELS } from "../constants";
+import {
+  DIFFICULTY_LABELS,
+  MAX_QUESTION_COUNT,
+  MIN_QUESTION_COUNT,
+} from "../constants";
 import type { Difficulty, ExamPreset } from "../types";
 
 export function HomeView(props: {
@@ -21,7 +25,8 @@ export function HomeView(props: {
   disabled: boolean;
 }) {
   const difficulties: Difficulty[] = ["easy", "medium", "hard"];
-  const clampCount = (n: number) => Math.max(1, Math.min(20, n));
+  const clampCount = (n: number) =>
+    Math.max(MIN_QUESTION_COUNT, Math.min(MAX_QUESTION_COUNT, n));
   const clampChoiceCount = (n: number) => Math.max(2, Math.min(5, n));
 
   return (
@@ -102,7 +107,7 @@ export function HomeView(props: {
             <button
               type="button"
               onClick={() => props.setCount(clampCount(props.count - 1))}
-              disabled={props.count <= 1}
+              disabled={props.count <= MIN_QUESTION_COUNT}
               aria-label="문항 수 줄이기"
             >
               −
@@ -111,7 +116,7 @@ export function HomeView(props: {
             <button
               type="button"
               onClick={() => props.setCount(clampCount(props.count + 1))}
-              disabled={props.count >= 20}
+              disabled={props.count >= MAX_QUESTION_COUNT}
               aria-label="문항 수 늘리기"
             >
               +

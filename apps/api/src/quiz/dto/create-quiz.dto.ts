@@ -13,7 +13,9 @@ import {
   Difficulty,
   EXAM_PRESET_SLUGS,
   MAX_CHOICE_COUNT,
+  MAX_QUESTION_COUNT,
   MIN_CHOICE_COUNT,
+  MIN_QUESTION_COUNT,
 } from "@quri/agent";
 
 export class CreateQuizDto {
@@ -24,8 +26,8 @@ export class CreateQuizDto {
 
   @IsOptional()
   @IsInt()
-  @Min(1)
-  @Max(20)
+  @Min(MIN_QUESTION_COUNT)
+  @Max(MAX_QUESTION_COUNT)
   count?: number;
 
   @IsOptional()

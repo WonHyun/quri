@@ -18,3 +18,7 @@ export const DIFFICULTY_LABELS: Record<Difficulty, string> = {
   medium: "보통",
   hard: "어려움",
 };
+
+/** 한 퀴즈의 문항 수 범위 (API 의 CreateQuizDto 와 동일) */
+export const MIN_QUESTION_COUNT = 1;
+export const MAX_QUESTION_COUNT = 100;

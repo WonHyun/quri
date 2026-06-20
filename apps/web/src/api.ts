@@ -5,6 +5,7 @@ import type {
   Difficulty,
   ExamPreset,
   Quiz,
+  QuizJob,
   QuizSummary,
   SubmitResult,
 } from "./types";
@@ -120,20 +121,43 @@ export async function me(): Promise<AuthUser> {
 
 // ── 퀴즈 ──────────────────────────────────────────────────────────────
 
-export async function createQuiz(input: {
+/**
+ * 퀴즈 생성 작업을 큐에 넣는다. 생성은 백그라운드에서 진행되며 즉시 작업 정보를
+ * 반환한다(202). 진행 상태는 listQuizJobs 로 폴링한다.
+ */
+export async function createQuizJob(input: {
   topic: string;
   count: number;
   choiceCount: number;
   difficulty: Difficulty;
   presetSlug?: string;
   subject?: string;
-}): Promise<Quiz> {
+}): Promise<QuizJob> {
   const res = await fetch("/api/quizzes", {
     method: "POST",
     headers: authHeaders(true),
     body: JSON.stringify(input),
   });
-  return handle<Quiz>(res);
+  return handle<QuizJob>(res);
+}
+
+/** 내 퀴즈 생성 작업 목록(최신순). */
+export async function listQuizJobs(): Promise<QuizJob[]> {
+  return handle<QuizJob[]>(
+    await fetch("/api/quiz-jobs", { headers: authHeaders() }),
+  );
+}
+
+/** 완료/실패한 작업을 목록에서 제거한다. */
+export async function deleteQuizJob(id: string): Promise<void> {
+  const res = await fetch(`/api/quiz-jobs/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (res.status === 401) throw new UnauthorizedError();
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`요청 실패 (${res.status})`);
+  }
 }
 
 /** 시험 프리셋 카탈로그 (인증 불필요, 정적 데이터). */

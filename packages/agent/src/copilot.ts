@@ -16,6 +16,10 @@ export interface CopilotAgentOptions {
   model?: string;
   /** 단일 호출 타임아웃(ms) */
   timeoutMs?: number;
+  /** 한 번의 Copilot 호출에서 생성할 최대 문항 수 (기본 10) */
+  batchSize?: number;
+  /** 동시에 실행할 배치 수 (기본 2) */
+  concurrency?: number;
 }
 
 export interface GenerateQuizParams {
@@ -41,15 +45,46 @@ export class CopilotAgent {
   private readonly bin: string;
   private readonly model: string;
   private readonly timeoutMs: number;
+  private readonly batchSize: number;
+  private readonly concurrency: number;
 
   constructor(opts: CopilotAgentOptions = {}) {
     this.bin = opts.bin ?? process.env.COPILOT_BIN ?? "copilot";
     this.model = opts.model ?? process.env.COPILOT_MODEL ?? "auto";
     this.timeoutMs =
       opts.timeoutMs ?? Number(process.env.COPILOT_TIMEOUT_MS ?? 120000);
+    this.batchSize = clampPositive(
+      opts.batchSize ?? Number(process.env.COPILOT_BATCH_SIZE ?? 10),
+      10,
+    );
+    this.concurrency = clampPositive(
+      opts.concurrency ?? Number(process.env.COPILOT_CONCURRENCY ?? 2),
+      2,
+    );
   }
 
+  /**
+   * 퀴즈를 생성한다. 문항 수가 batchSize 를 넘으면 여러 번의 Copilot 호출로
+   * 분할(배치)해 제한된 동시성으로 실행하고 결과를 병합한다. 대량 문항에서도
+   * 단일 호출 타임아웃·실패 위험을 낮춘다.
+   */
   async generateQuiz(params: GenerateQuizParams): Promise<GeneratedQuiz> {
+    const total = Math.max(1, Math.trunc(params.count));
+    const sizes = splitIntoBatches(total, this.batchSize);
+    if (sizes.length === 1) {
+      return this.generateBatch({ ...params, count: sizes[0] });
+    }
+
+    const batches = await runWithConcurrency(sizes, this.concurrency, (n) =>
+      this.generateBatch({ ...params, count: n }),
+    );
+    return batches.flat();
+  }
+
+  /** 단일 Copilot 호출로 정확히 params.count 개 문항을 생성·검증한다. */
+  private async generateBatch(
+    params: GenerateQuizParams,
+  ): Promise<GeneratedQuiz> {
     const prompt = buildPrompt(params);
     const raw = await this.runPrompt(prompt);
     const json = extractJsonArray(raw);
@@ -130,6 +165,52 @@ export class CopilotAgent {
       });
     });
   }
+}
+
+/** 양의 정수로 보정하고, 유효하지 않으면 fallback 을 쓴다. */
+function clampPositive(value: number, fallback: number): number {
+  return Number.isFinite(value) && value >= 1 ? Math.trunc(value) : fallback;
+}
+
+/** total 을 size 이하의 배치 크기 배열로 나눈다. 예: (25,10) → [10,10,5] */
+export function splitIntoBatches(total: number, size: number): number[] {
+  const n = Math.max(1, Math.trunc(total));
+  const s = Math.max(1, Math.trunc(size));
+  const batches: number[] = [];
+  let remaining = n;
+  while (remaining > 0) {
+    const take = Math.min(s, remaining);
+    batches.push(take);
+    remaining -= take;
+  }
+  return batches;
+}
+
+/**
+ * 항목들을 최대 limit 개씩 동시에 처리하고, 입력 순서를 유지한 결과 배열을 반환한다.
+ * 한 작업이라도 실패하면 즉시 전파한다(나머지는 결과에 반영되지 않음).
+ */
+export async function runWithConcurrency<T, R>(
+  items: readonly T[],
+  limit: number,
+  worker: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  const max = Math.max(1, Math.trunc(limit));
+  let cursor = 0;
+
+  async function pump(): Promise<void> {
+    while (cursor < items.length) {
+      const index = cursor++;
+      results[index] = await worker(items[index], index);
+    }
+  }
+
+  const runners = Array.from({ length: Math.min(max, items.length) }, () =>
+    pump(),
+  );
+  await Promise.all(runners);
+  return results;
 }
 
 function buildPrompt(params: GenerateQuizParams): string {

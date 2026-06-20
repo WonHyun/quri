@@ -2,11 +2,14 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Post,
   UseGuards,
 } from "@nestjs/common";
 import { QuizService } from "./quiz.service";
+import { QuizJobsService } from "./quiz-jobs.service";
 import { OwnershipService } from "../ownership/ownership.service";
 import { AttemptsService } from "../attempts/attempts.service";
 import { CreateQuizDto } from "./dto/create-quiz.dto";
@@ -24,15 +27,20 @@ import { AuthUser } from "../auth/auth.types";
 export class QuizController {
   constructor(
     private readonly quizService: QuizService,
+    private readonly jobs: QuizJobsService,
     private readonly ownership: OwnershipService,
     private readonly attempts: AttemptsService,
   ) {}
 
+  /**
+   * 생성 작업을 큐에 넣고 즉시 작업 정보를 반환한다(202).
+   * 생성은 백그라운드에서 수행되며, 클라이언트는 GET /api/quiz-jobs 로 폴링한다.
+   * 그동안 사용자는 다른 퀴즈를 풀거나 앱을 계속 조작할 수 있다.
+   */
   @Post()
-  async create(@CurrentUser() user: AuthUser, @Body() dto: CreateQuizDto) {
-    const quiz = await this.quizService.generateAndCreate(dto);
-    await this.ownership.create(quiz.id, user.id);
-    return this.quizService.toPublic(quiz);
+  @HttpCode(HttpStatus.ACCEPTED)
+  create(@CurrentUser() user: AuthUser, @Body() dto: CreateQuizDto) {
+    return this.jobs.enqueue(user.id, dto);
   }
 
   @Get()

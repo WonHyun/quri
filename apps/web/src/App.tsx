@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  createQuiz,
   getDashboard,
   getQuiz,
   listPresets,
@@ -13,6 +12,7 @@ import type {
   Difficulty,
   ExamPreset,
   Quiz,
+  QuizJob,
   QuizSummary,
   SubmitResult,
 } from "./types";
@@ -20,11 +20,13 @@ import { QuriLogo } from "./brand/Logo";
 import { RANDOM_TOPICS } from "./constants";
 import { useTheme } from "./hooks/useTheme";
 import { useAuth } from "./hooks/useAuth";
+import { useQuizJobs } from "./hooks/useQuizJobs";
 import { AuthView } from "./views/AuthView";
 import { HomeView } from "./views/HomeView";
 import { TakingView } from "./views/TakingView";
 import { ResultsView } from "./views/ResultsView";
 import { DashboardView } from "./views/DashboardView";
+import { JobsPanel } from "./views/JobsPanel";
 
 type View = "home" | "taking" | "results" | "dashboard";
 
@@ -50,6 +52,7 @@ export default function App() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   /** 인증 만료 시 자동 로그아웃 처리. */
   function guard(e: unknown): string {
@@ -67,6 +70,12 @@ export default function App() {
       if (e instanceof UnauthorizedError) logout();
     }
   }
+
+  const jobsApi = useQuizJobs({
+    enabled: !!user,
+    onReady: () => void refreshHistory(),
+    onUnauthorized: logout,
+  });
 
   useEffect(() => {
     if (user) void refreshHistory();
@@ -97,7 +106,12 @@ export default function App() {
     const p = presets.find((x) => x.slug === slug);
     setPresetSlug(slug);
     setSubject(null);
-    if (p) setTopic(p.defaultTopic);
+    if (p) {
+      setTopic(p.defaultTopic);
+      setCount(p.defaultCount);
+      setChoiceCount(p.defaultChoiceCount);
+      setDifficulty(p.defaultDifficulty);
+    }
   }
 
   /** 자유주제를 직접 수정하면 프리셋 선택을 해제한다. */
@@ -121,10 +135,9 @@ export default function App() {
       setError("주제를 입력해 주세요.");
       return;
     }
-    setLoading(true);
     setError(null);
     try {
-      const q = await createQuiz({
+      const job = await jobsApi.enqueue({
         topic: topic.trim(),
         count,
         choiceCount,
@@ -132,16 +145,19 @@ export default function App() {
         presetSlug: presetSlug ?? undefined,
         subject: subject ?? undefined,
       });
-      setQuiz(q);
-      setAnswers({});
-      setResult(null);
-      setView("taking");
-      void refreshHistory();
+      setNotice(
+        `‘${job.topic}’ ${job.count}문항을 생성하고 있어요. 완료되면 ‘생성 작업’과 ‘내 퀴즈’에 표시됩니다. 기다리는 동안 다른 퀴즈를 풀어도 돼요.`,
+      );
     } catch (e) {
       setError(guard(e));
-    } finally {
-      setLoading(false);
     }
+  }
+
+  /** 완료된 생성 작업을 열어 바로 풀이를 시작한다. */
+  async function handleOpenJob(job: QuizJob) {
+    if (!job.quizId) return;
+    await handleOpenHistory(job.quizId);
+    void jobsApi.dismiss(job.id);
   }
 
   async function handleOpenHistory(id: string) {
@@ -199,6 +215,7 @@ export default function App() {
     setQuiz(null);
     setResult(null);
     setError(null);
+    setNotice(null);
   }
 
   if (!ready) {
@@ -291,6 +308,20 @@ export default function App() {
               <span>{error}</span>
             </div>
           )}
+          {notice && (
+            <div className="banner info" role="status">
+              <span>⏳</span>
+              <span>{notice}</span>
+              <button
+                className="banner-close"
+                onClick={() => setNotice(null)}
+                aria-label="알림 닫기"
+                type="button"
+              >
+                ✕
+              </button>
+            </div>
+          )}
           {loading && (
             <div className="banner loading" role="status">
               <span className="spinner" aria-hidden="true" />
@@ -316,7 +347,7 @@ export default function App() {
               setSubject={setSubject}
               onRandom={randomizeTopic}
               onGenerate={handleGenerate}
-              disabled={loading}
+              disabled={jobsApi.creating}
             />
           )}
 
@@ -349,6 +380,11 @@ export default function App() {
         </main>
 
         <aside className="sidebar">
+          <JobsPanel
+            jobs={jobsApi.jobs}
+            onOpen={handleOpenJob}
+            onDismiss={(id) => void jobsApi.dismiss(id)}
+          />
           <h2>
             <span className="btn-i">📚</span> 내 퀴즈
           </h2>
