@@ -39,6 +39,9 @@ jobs:
       - name: Generate Prisma Client
         run: npm run prisma:generate --workspace=apps/api
 
+      - name: Build agent (@quri/agent)
+        run: npm run build --workspace=packages/agent
+
       - name: Build web (React)
         run: npm run build --workspace=apps/web
 
@@ -51,14 +54,21 @@ jobs:
 
       # The API build copies the web bundle into dist/public (postbuild),
       # so staging just needs the API dist + manifests + Prisma schema/client.
+      # @quri/agent is a workspace package (not on any registry), so it is
+      # vendored as a local file: dependency to make the bundle self-contained
+      # (its runtime dep `zod` is installed transitively).
       - name: Stage deployment artifact
         run: |
           mkdir -p deploy
           cp -r apps/api/dist deploy/dist
           cp -r apps/api/prisma deploy/prisma
           cp apps/api/package.json deploy/package.json
-          cp package-lock.json deploy/package-lock.json
-          cd deploy && npm ci --omit=dev
+          cd deploy
+          mkdir -p vendor/agent
+          cp -r ../packages/agent/dist vendor/agent/dist
+          cp ../packages/agent/package.json vendor/agent/package.json
+          npm pkg set dependencies.@quri/agent=file:vendor/agent
+          npm install --omit=dev --no-audit --no-fund
           # Generate the Prisma Client (incl. Linux engine) into the deploy bundle
           # so the runtime has a ready client without dev dependencies.
           npx --yes prisma@5 generate --schema=prisma/schema.prisma
